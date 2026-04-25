@@ -14,7 +14,7 @@ app.use(express.json());
 const db = mysql.createConnection({
     host: "localhost",
     user: "Murmure",
-    password: "Papillon",
+    password: "",
     database: "Murmure"
 });
 
@@ -27,6 +27,19 @@ db.connect(err => {
 const ws = new WebSocketServer({ port: 8081 });
 
 let clients = [];
+
+function broadcastUsers() {
+    const users = clients
+        .filter(c => c.username)
+        .map(c => c.username);
+
+    clients.forEach(client => {
+        client.send(JSON.stringify({
+            type: "users",
+            users: users
+        }));
+    });
+}
 
 ws.on("connection", (socket) => {
 
@@ -44,35 +57,53 @@ ws.on("connection", (socket) => {
         }
 
         // REGISTER 
-        if (data.type === "register") {
+       // REGISTER 
+if (data.type === "register") {
+
+    db.query(
+        "SELECT * FROM users WHERE username = ?",
+        [data.username],
+        async (err, results) => {
+
+            if (results.length > 0) {
+                socket.send(JSON.stringify({
+                    type: "error",
+                    message: "Utilisateur déjà existant"
+                }));
+                return;
+            }
+
+            const hash = await bcrypt.hash(data.password, 10);
 
             db.query(
-                "SELECT * FROM users WHERE username = ?",
-                [data.username],
-                async (err, results) => {
+                "INSERT INTO users (username, password) VALUES (?, ?)",
+                [data.username, hash],
+                () => {
 
-                    if (results.length > 0) {
-                        socket.send(JSON.stringify({
-                            type: "error",
-                            message: "Utilisateur déjà existant"
-                        }));
-                        return;
-                    }
+                    socket.username = data.username;
 
-                    const hash = await bcrypt.hash(data.password, 10);
+                    socket.send(JSON.stringify({
+                        type: "login_success"
+                    }));
+
+                    broadcastUsers();
 
                     db.query(
-                        "INSERT INTO users (username, password) VALUES (?, ?)",
-                        [data.username, hash],
-                        () => {
+                        "SELECT * FROM Messages ORDER BY date DESC LIMIT 100",
+                        (err, results) => {
+
                             socket.send(JSON.stringify({
-                                type: "login_success"
+                                type: "history",
+                                messages: results.reverse()
                             }));
                         }
                     );
                 }
             );
         }
+    );
+}   
+
 
         // LOGIN 
         if (data.type === "login") {
@@ -105,7 +136,10 @@ ws.on("connection", (socket) => {
 
                     socket.send(JSON.stringify({
                         type: "login_success"
+                        
                     }));
+
+                    broadcastUsers();
 
                     // HISTORIQUE
                     db.query(
@@ -166,6 +200,7 @@ ws.on("connection", (socket) => {
         console.log("Client déconnecté");
 
         clients = clients.filter(c => c !== socket);
+        broadcastUsers();
     });
 });
 

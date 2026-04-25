@@ -84,3 +84,48 @@ button:hover {
     width: 23%;
     margin-left: 2%;
 }
+
+.message:hover {
+    background: rgba(255,255,255,0.05);
+    padding: 5px;
+    border-radius: 5px;
+}
+
+.chat-container {
+    display: flex;
+    gap: 10px;
+}
+
+.chat-left {
+    flex: 3;
+}
+
+.chat-right {
+    flex: 1;
+    background: #2c2f33;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+#users {
+    list-style: none;
+    padding: 0;
+}
+
+#users li {
+    padding: 5px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.input-area {
+    display: flex;
+    margin-top: 5px;
+}
+
+.input-area input {
+    flex: 3;
+}
+
+.input-area button {
+    flex: 1;
+}
